@@ -1,7 +1,3 @@
-Certainly! Here's a beautifully formatted and **cleaned-up** version of your Markdown code, enhanced with consistent styling, icons (for better visuals), and clear sectioning for an improved reading experience:
-
----
-
 # 🚀 Bitcoin Price Prediction App
 
 A sleek and interactive web app that predicts Bitcoin prices using a pre-trained machine learning model.
