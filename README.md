@@ -3,6 +3,9 @@
 A sleek and interactive web app that predicts Bitcoin prices using a pre-trained machine learning model.
 
 ---
+**Live App:**
+[**BitCoin Prediction App**](https://bitcoin-analysis-and-perdiction.streamlit.app/)
+---
 
 ## ✨ Features
 
@@ -41,7 +44,7 @@ A sleek and interactive web app that predicts Bitcoin prices using a pre-trained
    ```
 
 3. **Open in Browser**
-   Navigate to: [http://localhost:8501](http://localhost:8501)
+   Navigate to: [Bitcoin-perdcition-app](https://bitcoin-analysis-and-perdiction.streamlit.app/)
 
 ---
 
