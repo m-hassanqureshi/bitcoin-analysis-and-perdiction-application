@@ -62,4 +62,4 @@ This project is open for **educational purposes only**.
 
 ---
 
-Let me know if you'd like a **README.md** version or want to convert this to a **PDF or HTML** for presentation!
+
