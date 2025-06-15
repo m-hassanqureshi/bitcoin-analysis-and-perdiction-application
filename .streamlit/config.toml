@@ -1,0 +1,26 @@
+[theme]
+name = "Advanced Light Yellow"
+background = "light"
+primary_color = "#FFD600"  # Yellow
+
+[colors]
+background = "#FFFFFF"
+foreground = "#222222"
+primary = "#FFD600"
+secondary = "#FFF9C4"
+accent = "#FFEB3B"
+error = "#D32F2F"
+success = "#388E3C"
+warning = "#FFA000"
+info = "#1976D2"
+
+[settings]
+font_family = "Segoe UI, Arial, sans-serif"
+font_size = 14
+border_radius = 6
+shadow = true
+
+[security]
+enable_cors = true
+enable_csrf_protection = true
+
