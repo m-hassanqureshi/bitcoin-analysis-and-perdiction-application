@@ -19,6 +19,7 @@ A sleek and interactive web app that predicts Bitcoin prices using a pre-trained
 ├── bitcoin_model.pkl      # 🤖 Pre-trained ML model
 ├── bitcoin.csv            # 📊 Historical Bitcoin price data
 ├── logo.png               # 🖼️ App logo
+├── requirements.txt              # Requirements    
 └── .streamlit/
     └── config.toml        # 🎨 Streamlit configuration and theme file
 ```
