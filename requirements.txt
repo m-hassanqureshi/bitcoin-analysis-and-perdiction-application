@@ -5,7 +5,7 @@ numpy
 joblib
 matplotlib 
 plotly 
-xgboost
+lightgbm
 scipy 
 seaborn 
 statsmodels
