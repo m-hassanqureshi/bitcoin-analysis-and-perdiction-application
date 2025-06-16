@@ -163,7 +163,7 @@ hr {
 }
 #MainMenu {visibility: hidden;} 
 </style> 
-<a href="#492ffceb">  
+<a href="#bitcoin-analysis-and-prediction-app">  
     <button class="fab" title="Back to Top">↑</button>
 </a>
 """, unsafe_allow_html=True) 
