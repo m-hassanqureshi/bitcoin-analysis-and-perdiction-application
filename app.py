@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
@@ -6,18 +6,18 @@ import seaborn as sns
 import plotly.graph_objects as go
 from PIL import Image 
 from io import StringIO
-import joblib
-from xgboost import XGBRegressor
+import joblib 
 import os
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split 
+import lightgbm as lgb 
 from sklearn.metrics import mean_squared_error, r2_score
 
 # ---- Page Setup ----
-icon= Image.open("icon.png")  
+logo = Image.open("logo.png")  
 st.set_page_config(
     page_title="Bitcoin EDA Dashboard",
     layout="wide",
-    page_icon=icon
+    page_icon=logo 
 )
 # --- Custom CSS Styling ---
 # --- Custom Modern Flutter-Inspired Styling ---
@@ -163,13 +163,12 @@ hr {
 }
 #MainMenu {visibility: hidden;} 
 </style> 
-<a href="#bitcoin-analysis-and-prediction-app">  
+<a href="#492ffceb">  
     <button class="fab" title="Back to Top">↑</button>
 </a>
 """, unsafe_allow_html=True) 
 
-# ---- Sidebar Branding ---- 
-logo=Image.open("logo.png")
+# ---- Sidebar Branding ----
 st.sidebar.image(logo, use_container_width=True)
 
 # --- Load Data ---
@@ -369,59 +368,68 @@ st.download_button(
 
 st.header("🔮 Bitcoin Closing Price Prediction")
 
-@st.cache_resource
+@st.cache_resource 
+
+
+
+
 def load_or_train_model():
-    if os.path.exists("bitcoin_model_final.pkl"):
-        model = joblib.load("bitcoin_model_final.pkl")
-    else:
-        df = pd.read_csv("bitcoin.csv")
-        df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
-        df = df.sort_values('Date')
-        df = df[df['Volume'] != 0]
+    if os.path.exists("bitcoin_lgb_model.pkl"):
+        return joblib.load("bitcoin_lgb_model.pkl")
 
-        # Feature Engineering
-        df['Day'] = df['Date'].dt.day
-        df['Month'] = df['Date'].dt.month
-        df['Year'] = df['Date'].dt.year
-        df['Weekday'] = df['Date'].dt.weekday
-        df['HL_Range'] = df['High'] - df['Low']
-        df['OC_Change'] = df['Close'] - df['Open']
-        df['MA_7'] = df['Close'].rolling(window=7).mean()
-        df['MA_14'] = df['Close'].rolling(window=14).mean()
-        df['Volatility_7'] = df['Close'].rolling(window=7).std()
-        df['Lag_1'] = df['Close'].shift(1)
-        df['Target'] = df['Close'].shift(-1)
-        df = df.dropna()
+    # Load and prepare data
+    df = pd.read_csv("bitcoin.csv")
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+    df = df.sort_values('Date')
+    df = df[df['Volume'] != 0]
 
-        features = [
-            'Open', 'High', 'Low', 'Close', 'Volume', 'Marketcap',
-            'Day', 'Month', 'Year', 'Weekday',
-            'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Volatility_7', 'Lag_1'
-        ]
-        X = df[features]
-        y = df['Target']
+    # Feature Engineering
+    df['Day'] = df['Date'].dt.day
+    df['Month'] = df['Date'].dt.month
+    df['Year'] = df['Date'].dt.year
+    df['Weekday'] = df['Date'].dt.weekday
+    df['HL_Range'] = df['High'] - df['Low']
+    df['OC_Change'] = df['Close'] - df['Open']
+    df['MA_7'] = df['Close'].rolling(window=7).mean()
+    df['MA_14'] = df['Close'].rolling(window=14).mean()
+    df['Volatility_7'] = df['Close'].rolling(window=7).std()
+    df['Lag_1'] = df['Close'].shift(1)
+    df['Target'] = df['Close'].shift(-1)
+    df = df.dropna()
 
-        # Split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+    features = [
+        'Open', 'High', 'Low', 'Close', 'Volume', 'Marketcap',
+        'Day', 'Month', 'Year', 'Weekday',
+        'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Volatility_7', 'Lag_1'
+    ]
+    X = df[features]
+    y = df['Target']
 
-        # GridSearchCV
-        param_grid = {
-            'n_estimators': [300, 500],
-            'learning_rate': [0.01, 0.05],
-            'max_depth': [5, 7, 9],
-            'subsample': [0.7, 1.0],
-            'colsample_bytree': [0.7, 1.0]
-        }
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
-        model = XGBRegressor(objective='reg:squarederror', random_state=42)
-        grid = GridSearchCV(model, param_grid, cv=3, scoring='r2', n_jobs=-1)
-        grid.fit(X, y)
+    # Create and train LightGBM model
+    lgb_model = lgb.LGBMRegressor(
+        n_estimators=1000,
+        learning_rate=0.01,
+        max_depth=7,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42
+    )
 
-        best_model = grid.best_estimator_
-        joblib.dump(best_model, "bitcoin_model_final.pkl")
-        model = best_model
+    lgb_model.fit(
+        X_train, y_train,
+        eval_set=[(X_test, y_test)],
+        callbacks=[lgb.early_stopping(50)]
+    ) 
 
-    return model
+    # Save and return model
+    joblib.dump(lgb_model, "bitcoin_lgb_model.pkl")
+    return lgb_model
+
+
+
 
 # Load model
 model = load_or_train_model()
@@ -434,7 +442,7 @@ df = df.sort_values('Date')
 df = df[df['Volume'] != 0]
 df['Day'] = df['Date'].dt.day
 
-df['Month'] = df['Date'].dt.month
+df['Month'] = df['Date'].dt.month 
 df['Year'] = df['Date'].dt.year
 df['Weekday'] = df['Date'].dt.weekday
 df['HL_Range'] = df['High'] - df['Low']
@@ -452,19 +460,11 @@ features = [
 ]
 latest = df[features].iloc[-1:]
 pred = model.predict(latest)[0]
-st.metric("Tomorrow's Predicted Close Price(Based on Data Set Date Range)", f"${pred:.2f}")
+st.metric("Tomorrow's Predicted Close Price(Based on Data Set Date Range)", f"${pred:.2f}") 
 
-# Plotting
-st.subheader("📉 Recent Close Price Trend")
-fig, ax = plt.subplots(figsize=(12, 4))
-df.tail(60).plot(x='Date', y='Close', ax=ax, color='purple')
-ax.set_title("Last 60 Days of Bitcoin Close Prices")
-st.pyplot(fig)
-
-# Model Evaluation
 st.subheader("📏 Model Evaluation")
 y_true = df['Close'].shift(-1).dropna()
-y_pred = model.predict(df[features].iloc[:-1])
+y_pred = model.predict(df[features].iloc[:-1]) 
 r2 = r2_score(y_true, y_pred)
 rmse = np.sqrt(mean_squared_error(y_true, y_pred))
 st.write(f"**R² Score (Accuracy):** {r2:.2%}")
