@@ -168,7 +168,8 @@ hr {
 </a>
 """, unsafe_allow_html=True) 
 
-# ---- Sidebar Branding ----
+# ---- Sidebar Branding ---- 
+logo=Image.open("logo.png")
 st.sidebar.image(logo, use_container_width=True)
 
 # --- Load Data ---
