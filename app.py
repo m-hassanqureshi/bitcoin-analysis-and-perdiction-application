@@ -9,9 +9,8 @@ from io import StringIO
 import joblib
 from xgboost import XGBRegressor
 import os
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt 
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import mean_squared_error, r2_score
 
 # ---- Page Setup ----
 logo = Image.open("logo.png")  
@@ -20,21 +19,160 @@ st.set_page_config(
     layout="wide",
     page_icon=logo 
 )
-# ---- Hide Streamlit Menu and Footer ----
-hide_st_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    </style>
-    """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# --- Custom CSS Styling ---
+# --- Custom Modern Flutter-Inspired Styling ---
+st.markdown("""
+<style>
+body, .stApp {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    font-family: 'Poppins', sans-serif;
+}
+
+.stCard {
+    background: rgba(255,105,180,0.05);
+    box-shadow: 0 8px 32px 0 rgba(255,105,180,0.15);
+    backdrop-filter: blur(6px);
+    border-radius: 18px;
+    border: 1px solid rgba(255,105,180,0.25);
+    padding: 2.5rem 2rem 2rem 2rem;
+    margin-bottom: 2rem;
+    transition: box-shadow 0.3s;
+}
+.stCard:hover {
+    box-shadow: 0 16px 40px 0 rgba(255,105,180,0.35);
+}
+.stCard h3 {
+    margin-top: 0;
+    color: #d272ff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #d272ff !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-top: 1.2rem;
+}
+
+[data-testid="stSidebar"] {
+    background: rgba(255,105,180,0.05);
+    color: #333333 !important;
+    padding: 20px;
+    border-right: 1px solid rgba(255,105,180,0.2);
+}
+
+.stDataFrame, .stTable {
+    background-color: rgba(255,105,180,0.08) !important;
+    color: #333333 !important;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(255,105,180,0.2);
+    padding: 10px;
+}
+
+[data-testid="stMetric"] {
+    background: rgba(255,105,180,0.08);
+    border-radius: 12px;
+    padding: 15px 20px;
+    color: #d272ff !important;
+    box-shadow: 0 4px 10px rgba(255,105,180,0.2);
+    text-align: center;
+}
+
+.stButton>button {
+    background: linear-gradient(to right, #ff92c2, #d272ff);
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    border: none;
+    padding: 0.6em 1.8em;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 8px rgba(255,105,180,0.3);
+}
+.stButton>button:hover {
+    background: linear-gradient(to right, #d272ff, #ff4785);
+    color: white;
+    transform: scale(1.05);
+}
+
+[data-testid="stDownloadButton"] {
+    background: #fff0f7;
+    color: #d272ff;
+    border-radius: 8px;
+    border: 1px solid #d272ff;
+    font-weight: 600;
+    padding: 0.5em 1.2em;
+}
+[data-testid="stDownloadButton"]:hover {
+    background: #d272ff;
+    color: white;
+}
+
+input, select, textarea {
+    background: rgba(255,105,180,0.08) !important;
+    color: #333333 !important;
+    border-radius: 8px !important;
+    border: 1px solid #d272ff !important;
+    padding: 0.5em;
+}
+
+.stAlert {
+    background: rgba(255,105,180,0.07) !important;
+    color: #d272ff !important;
+    border-left: 5px solid #d272ff !important;
+    border-radius: 8px;
+    padding: 10px 15px;
+    box-shadow: 0 2px 10px rgba(255,105,180,0.15);
+}
+
+.js-plotly-plot .plotly {
+    background-color: rgba(255,105,180,0.07) !important;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: #d272ff;
+    margin: 20px 0;
+}
+
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #d272ff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+    box-shadow: 0 4px 10px rgba(255,105,180,0.3);
+    cursor: pointer;
+    transition: 0.3s ease;
+    z-index: 9999;
+}
+.fab:hover {
+    background: #ff4785; 
+    color: white;
+    transform: scale(1.1);
+}
+#MainMenu {visibility: hidden;} 
+</style> 
+<a href="#492ffceb">  
+    <button class="fab" title="Back to Top">↑</button>
+</a>
+""", unsafe_allow_html=True) 
+
 # ---- Sidebar Branding ----
 st.sidebar.image(logo, use_container_width=True)
 
 # --- Load Data ---
 @st.cache_data
-
 def load_data():
     df = pd.read_csv("bitcoin.csv")
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
@@ -60,8 +198,12 @@ df = df[(df['Date'].dt.date >= date_range[0]) & (df['Date'].dt.date <= date_rang
 # --- Basic Understanding and Cleaning ---
 st.header("🥮 Bitcoin Analysis and Prediction App")
 st.write("**Date Range:**", f"{df['Date'].min().date()} to {df['Date'].max().date()}") 
-st.write("**Data Set Overview:**")
-st.write(df.head(15))
+st.write("**Original Data Set Overview :**")
+df_1=pd.read_csv("bitcoin.csv")
+st.write(df_1.head(5))
+st.write("**Total Records:**", len(df))
+st.write("**Extended Data Set Overview:**")
+st.write(df.head(10))
 st.write("**Missing Values:**")
 st.dataframe(df.isnull().sum())
 st.write("**Data Types:**")
@@ -75,7 +217,7 @@ info_str = buffer.getvalue()
 st.code(info_str, language='text')
 
 # --- Trend Analysis ---
-st.header("📈 Trend Analysis Over Time")
+st.header("📈 Trend Analysis Over Time") 
 
 fig1 = go.Figure()
 fig1.add_trace(go.Scatter(x=df['Date'], y=df['Close'], name='Close'))
@@ -127,16 +269,12 @@ st.dataframe(df.nlargest(5, 'Daily Return')[['Date', 'Daily Return']])
 st.write("**Top Losses:**")
 st.dataframe(df.nsmallest(5, 'Daily Return')[['Date', 'Daily Return']])
 
-fig5 = go.Figure()
-fig5.add_trace(go.Scatter(x=df['Date'], y=df['Cumulative Return'], name='Cumulative Return'))
-fig5.update_layout(title="Cumulative Return Over Time", xaxis_title="Date")
-st.plotly_chart(fig5, use_container_width=True)
-
+# --- Data Overview ---
 # --- Time-Based Grouping ---
 st.header("🗓️ Time-Based Grouping")
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
-monthly_return = df.groupby(['Year', 'Month'])['Daily Return'].mean().unstack()
+monthly_return = df.groupby(['Year', 'Month'])['Daily Return'].mean().unstack() 
 st.subheader("Average Monthly Return")
 st.dataframe(monthly_return.style.format("{:.2%}"))
 
@@ -156,7 +294,7 @@ fig7.add_trace(go.Scatter(x=df['Date'], y=df['Volume'], name='Volume'))
 fig7.update_layout(title="Volume Over Time")
 st.plotly_chart(fig7, use_container_width=True)
 
-st.subheader("Zero Volume Days")
+st.subheader("Zero Volume Days") 
 st.dataframe(df[df['Volume'] == 0][['Date', 'Volume']])
 
 # --- Anomalies ---
@@ -221,17 +359,19 @@ if x_axis != y_axis:
 st.subheader("Download Filtered Data")
 csv = df.to_csv(index=False).encode('utf-8')
 st.download_button(
-    label="Download as CSV",
+    label="Download as CSV", 
     data=csv,
     file_name='filtered_bitcoin_data.csv',
     mime='text/csv'
 ) 
+
+
 st.header("🔮 Bitcoin Closing Price Prediction")
+
 @st.cache_resource
-# Load or train the model
 def load_or_train_model():
-    if os.path.exists("bitcoin_model.pkl"):
-        model = joblib.load("bitcoin_model.pkl")
+    if os.path.exists("bitcoin_model_final.pkl"):
+        model = joblib.load("bitcoin_model_final.pkl")
     else:
         df = pd.read_csv("bitcoin.csv")
         df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
@@ -247,6 +387,7 @@ def load_or_train_model():
         df['OC_Change'] = df['Close'] - df['Open']
         df['MA_7'] = df['Close'].rolling(window=7).mean()
         df['MA_14'] = df['Close'].rolling(window=14).mean()
+        df['Volatility_7'] = df['Close'].rolling(window=7).std()
         df['Lag_1'] = df['Close'].shift(1)
         df['Target'] = df['Close'].shift(-1)
         df = df.dropna()
@@ -254,29 +395,44 @@ def load_or_train_model():
         features = [
             'Open', 'High', 'Low', 'Close', 'Volume', 'Marketcap',
             'Day', 'Month', 'Year', 'Weekday',
-            'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Lag_1'
+            'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Volatility_7', 'Lag_1'
         ]
         X = df[features]
         y = df['Target']
 
+        # Split
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
-        model = XGBRegressor(n_estimators=200, learning_rate=0.1, max_depth=5)
-        model.fit(X_train, y_train)
-        joblib.dump(model, "bitcoin_model.pkl")
+        # GridSearchCV
+        param_grid = {
+            'n_estimators': [300, 500],
+            'learning_rate': [0.01, 0.05],
+            'max_depth': [5, 7, 9],
+            'subsample': [0.7, 1.0],
+            'colsample_bytree': [0.7, 1.0]
+        }
+
+        model = XGBRegressor(objective='reg:squarederror', random_state=42)
+        grid = GridSearchCV(model, param_grid, cv=3, scoring='r2', n_jobs=-1)
+        grid.fit(X, y)
+
+        best_model = grid.best_estimator_
+        joblib.dump(best_model, "bitcoin_model_final.pkl")
+        model = best_model
 
     return model
 
+# Load model
 model = load_or_train_model()
 
-# Load dataset
+# Load and prepare data
+st.subheader("📊 Prediction")
 df = pd.read_csv("bitcoin.csv")
 df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 df = df.sort_values('Date')
 df = df[df['Volume'] != 0]
-
-# Feature engineering
 df['Day'] = df['Date'].dt.day
+
 df['Month'] = df['Date'].dt.month
 df['Year'] = df['Date'].dt.year
 df['Weekday'] = df['Date'].dt.weekday
@@ -284,75 +440,103 @@ df['HL_Range'] = df['High'] - df['Low']
 df['OC_Change'] = df['Close'] - df['Open']
 df['MA_7'] = df['Close'].rolling(window=7).mean()
 df['MA_14'] = df['Close'].rolling(window=14).mean()
+df['Volatility_7'] = df['Close'].rolling(window=7).std()
 df['Lag_1'] = df['Close'].shift(1)
-
-# Drop NA rows
 df = df.dropna()
 
 features = [
     'Open', 'High', 'Low', 'Close', 'Volume', 'Marketcap',
     'Day', 'Month', 'Year', 'Weekday',
-    'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Lag_1'
+    'HL_Range', 'OC_Change', 'MA_7', 'MA_14', 'Volatility_7', 'Lag_1'
 ]
-
 latest = df[features].iloc[-1:]
-
-# Prediction
 pred = model.predict(latest)[0]
-st.subheader("📊 Prediction")
-st.metric("Tomorrow's Predicted Close Price", f"${pred:.2f}")
+st.metric("Tomorrow's Predicted Close Price(Based on Data Set Date Range)", f"${pred:.2f}")
 
-# Plot recent Close prices
+# Plotting
 st.subheader("📉 Recent Close Price Trend")
 fig, ax = plt.subplots(figsize=(12, 4))
-df.tail(60).plot(x='Date', y='Close', ax=ax, color='orange')
+df.tail(60).plot(x='Date', y='Close', ax=ax, color='purple')
 ax.set_title("Last 60 Days of Bitcoin Close Prices")
-st.pyplot(fig) 
-# --- Predict Next Day Price Using User-Entered Latest Data ---
-st.header("📝 Predict Next Day Price with Custom Input")
-with st.form("predict_next_day"):
-    st.write("Enter the latest Bitcoin data to predict the next day's closing price:")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        open_val = st.number_input("Open", value=float(df['Open'].iloc[-1]))
-        high_val = st.number_input("High", value=float(df['High'].iloc[-1]))
-        low_val = st.number_input("Low", value=float(df['Low'].iloc[-1]))
-        close_val = st.number_input("Close", value=float(df['Close'].iloc[-1]))
-    with col2:
-        volume_val = st.number_input("Volume", value=float(df['Volume'].iloc[-1]))
-        marketcap_val = st.number_input("Marketcap", value=float(df['Marketcap'].iloc[-1]))
-        day_val = st.number_input("Day", value=int(df['Date'].iloc[-1].day), step=1)
-        month_val = st.number_input("Month", value=int(df['Date'].iloc[-1].month), step=1)
-    with col3:
-        year_val = st.number_input("Year", value=int(df['Date'].iloc[-1].year), step=1)
-        weekday_val = st.number_input("Weekday (0=Mon)", value=int(df['Date'].iloc[-1].weekday()), step=1)
-        hl_range_val = st.number_input("High-Low Range", value=float(df['High'].iloc[-1] - df['Low'].iloc[-1]))
-        oc_change_val = st.number_input("Close-Open Change", value=float(df['Close'].iloc[-1] - df['Open'].iloc[-1]))
-        ma7_val = st.number_input("MA_7", value=float(df['Close'].rolling(7).mean().iloc[-1]))
-        ma14_val = st.number_input("MA_14", value=float(df['Close'].rolling(14).mean().iloc[-1]))
-        lag1_val = st.number_input("Lag_1 (Prev Close)", value=float(df['Close'].iloc[-1]))
+st.pyplot(fig)
 
-    submitted = st.form_submit_button("Predict Next Day Close Price")
-    if submitted:
-        input_df = pd.DataFrame([{
-            'Open': open_val,
-            'High': high_val,
-            'Low': low_val,
-            'Close': close_val,
-            'Volume': volume_val,
-            'Marketcap': marketcap_val,
-            'Day': day_val,
-            'Month': month_val,
-            'Year': year_val,
-            'Weekday': weekday_val,
-            'HL_Range': hl_range_val,
-            'OC_Change': oc_change_val,
-            'MA_7': ma7_val,
-            'MA_14': ma14_val,
-            'Lag_1': lag1_val
-        }])
-        pred_custom = model.predict(input_df)[0]
-        st.success(f"Predicted Next Day Close Price: ${pred_custom:.2f}")
+# Model Evaluation
+st.subheader("📏 Model Evaluation")
+y_true = df['Close'].shift(-1).dropna()
+y_pred = model.predict(df[features].iloc[:-1])
+r2 = r2_score(y_true, y_pred)
+rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+st.write(f"**R² Score (Accuracy):** {r2:.2%}")
+st.write(f"**RMSE:** ${rmse:,.2f}")
+
+# Plot actual vs predicted
+fig2, ax2 = plt.subplots(figsize=(10, 4))
+ax2.plot(y_true.values, label='Actual', color='blue')
+ax2.plot(y_pred, label='Predicted', color='red', alpha=0.7)
+ax2.set_title("Actual vs Predicted Close Price")
+ax2.legend()
+st.pyplot(fig2) 
+
+# Custom Prediction Section
+# --- Sidebar Inputs --- 
+st.sidebar.header("📊 Input Today's Bitcoin Data")
+input_date = st.sidebar.date_input("Date", value=pd.Timestamp.today())
+input_open = st.sidebar.number_input("Open", min_value=0.0, value=0.0, step=0.01)
+input_high = st.sidebar.number_input("High", min_value=0.0, value=0.0, step=0.01)
+input_low = st.sidebar.number_input("Low", min_value=0.0, value=0.0, step=0.01)
+input_close = st.sidebar.number_input("Close", min_value=0.0, value=0.0, step=0.01)
+input_volume = st.sidebar.number_input("Volume", min_value=0.0, value=0.0, step=1.0)
+input_marketcap = st.sidebar.number_input("Marketcap", min_value=0.0, value=0.0, step=1.0)
+
+# --- Feature Engineering ---
+input_date_pd = pd.to_datetime(input_date)
+day = input_date_pd.day
+month = input_date_pd.month
+year = input_date_pd.year
+weekday = input_date_pd.weekday()
+hl_range = input_high - input_low
+oc_change = input_close - input_open
+
+# --- Rolling Features ---
+df_hist = df.copy()
+df_hist = df_hist.sort_values("Date")
+last_6 = df_hist.tail(6)[['Close']]
+closes = last_6['Close'].tolist() + [input_close]
+closes_series = pd.Series(closes)
+ma_7 = closes_series.rolling(window=7).mean().iloc[-1]
+ma_14 = closes_series.rolling(window=14).mean().iloc[-1] if len(closes_series) >= 14 else np.nan
+vol_7 = closes_series.rolling(window=7).std().iloc[-1]
+lag_1 = closes_series.iloc[-2] if len(closes_series) >= 2 else np.nan
+
+# --- Input Feature DataFrame ---
+input_features = pd.DataFrame([{
+    'Open': input_open,
+    'High': input_high,
+    'Low': input_low,
+    'Close': input_close,
+    'Volume': input_volume,
+    'Marketcap': input_marketcap,
+    'Day': day,
+    'Month': month,
+    'Year': year,
+    'Weekday': weekday,
+    'HL_Range': hl_range,
+    'OC_Change': oc_change,
+    'MA_7': ma_7,
+    'MA_14': ma_14,
+    'Volatility_7': vol_7,
+    'Lag_1': lag_1
+}])
+
+# Handle NaNs
+input_features = input_features.fillna(0)
+
+# --- Make Prediction ---
+pred_custom = model.predict(input_features)[0]
+
+# --- Display on Main Page ---
+st.subheader("📈 Predicted Close Price for Tomorrow (Custom Input Data ):")
+st.success(f"${pred_custom:.2f}")
 # 5. Fun Fact Section
 st.header("💡 Fun Bitcoin Facts")
 facts = [
