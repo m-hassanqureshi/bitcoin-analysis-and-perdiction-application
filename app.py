@@ -13,11 +13,11 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score
 
 # ---- Page Setup ----
-logo = Image.open("logo.png")  
+icon= Image.open("icon.png")  
 st.set_page_config(
     page_title="Bitcoin EDA Dashboard",
     layout="wide",
-    page_icon=logo 
+    page_icon=icon
 )
 # --- Custom CSS Styling ---
 # --- Custom Modern Flutter-Inspired Styling ---
